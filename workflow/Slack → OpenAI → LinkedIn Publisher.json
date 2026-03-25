@@ -1,0 +1,967 @@
+{
+  "name": "Slack → OpenAI → LinkedIn Publisher",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.text }}",
+              "rightValue": "!skip",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            },
+            {
+              "id": "condition-2",
+              "leftValue": "={{ $json.text }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "condition-3",
+              "leftValue": "={{ $json.bot_id }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "condition-4",
+              "leftValue": "={{ $json.thread_ts }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "717ed410-7df1-49c2-b120-77814688780a",
+      "name": "Ignore Rules",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        912,
+        240
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "9cc22384-891b-4d72-a027-5f9f08c4dd9d",
+      "name": "Stop",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "field-1",
+              "name": "raw_text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "field-2",
+              "name": "source_channel",
+              "value": "={{ $json.channel }}",
+              "type": "string"
+            },
+            {
+              "id": "field-3",
+              "name": "source_user",
+              "value": "={{ $json.user }}",
+              "type": "string"
+            },
+            {
+              "id": "field-4",
+              "name": "source_ts",
+              "value": "={{ $json.ts }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c0f891ef-4b4a-4959-8291-f29877ccbf36",
+      "name": "Prepare Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1184,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "error-check",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "f3a092f3-7157-4452-91bd-325f9b6ddcf9",
+      "name": "Check Parse Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2032,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $json.log_channel_id }}",
+          "mode": "id"
+        },
+        "text": "=⚠️ *JSON Parse Error*\n\n*Error:* {{ $json.error_message }}\n\n*Original Slack message:*\n{{ $json.raw_text }}\n\n*Raw OpenAI response:*\n```{{ JSON.stringify($json.raw_response, null, 2) }}```",
+        "otherOptions": {}
+      },
+      "id": "562c9bf8-b85c-4c46-a00f-0730f0953596",
+      "name": "Log Parse Error",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        2432,
+        16
+      ],
+      "webhookId": "eb983526-eb3a-4644-8944-236aec3908c0",
+      "credentials": {
+        "slackApi": {
+          "id": "qBHktyyLDogsMSxz",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "safety-check",
+              "leftValue": "={{ $json.safety_ok }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "9d0afb59-50a2-4219-8e74-c04d37e58409",
+      "name": "Safety Gate",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $json.log_channel_id}}",
+          "mode": "id"
+        },
+        "text": "=🛑 *Safety Check Failed*\n\n*Reason:* {{ $json.notes }}\n\n*Original Slack message:*\n{{ $json.raw_text }}\n\n*Safer alternative suggested:*\n{{ $json.post_text }}",
+        "otherOptions": {}
+      },
+      "id": "5c9cf7e8-0b4b-4336-a43e-cad16afbaf58",
+      "name": "Log Safety Failure",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        2272,
+        288
+      ],
+      "webhookId": "26b7317e-b024-4fe6-8ef0-f63e603ad6ef",
+      "credentials": {
+        "slackApi": {
+          "id": "qBHktyyLDogsMSxz",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{$json.approval_channel_id }}",
+          "mode": "id"
+        },
+        "messageType": "block",
+        "blocksUi": "={\n  \"text\": \"LinkedIn Post Ready for Approval\",\n  \"blocks\": [\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*LinkedIn Post Ready for Approval*\\n\\n*Draft:*\\n{{ $json.post_text }}\\n{{ $json.post_link }}\\n{{ $json.hashtags }}\"\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": { \"type\": \"plain_text\", \"text\": \"Approve\" },\n          \"style\": \"primary\",\n          \"url\": \"{{ ($execution.resumeUrl || '') }}?decision=approve\"\n        },\n        {\n          \"type\": \"button\",\n          \"text\": { \"type\": \"plain_text\", \"text\": \"Reject\" },\n          \"style\": \"danger\",\n          \"url\": \"{{ ($execution.resumeUrl || '') }}?decision=reject\"\n        }\n      ]\n    }\n  ]\n}\n",
+        "text": "=*LinkedIn Post Ready for Approval*\n\nDraft:\n{{ $json.post_text }}\n{{ $json.hashtags }}\n\nApprove:\n{{ $execution.resumeUrl }}?decision=approve\n\nReject:\n{{ $execution.resumeUrl }}?decision=reject\n",
+        "otherOptions": {}
+      },
+      "id": "41510ad9-fd07-4281-91ac-050a38115165",
+      "name": "Send For Approval",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        2272,
+        496
+      ],
+      "webhookId": "9f48233a-a64a-443e-8496-6a015d416fee",
+      "credentials": {
+        "slackApi": {
+          "id": "qBHktyyLDogsMSxz",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "id": "b7c2a6bd-7131-452f-b2e9-de86af08a7c9",
+      "name": "Wait For Approval Reply",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2464,
+        496
+      ],
+      "webhookId": "auto-generated-wait"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "approval-check",
+              "leftValue": "={{ $json.query.decision }}\n",
+              "rightValue": "approve",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "664e79c4-035d-4a24-bcf7-e4300854bc46",
+      "name": "Approval Decision",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2736,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $json.log_channel_id}}",
+          "mode": "id"
+        },
+        "text": "=❌ *LinkedIn Post Rejected*\n\nPost was not approved for publishing.",
+        "otherOptions": {}
+      },
+      "id": "a0846faa-8bc4-449c-891b-486d053ad64b",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        3168,
+        288
+      ],
+      "webhookId": "0cab33f0-7240-435d-b818-61ad7e006588",
+      "credentials": {
+        "slackApi": {
+          "id": "qBHktyyLDogsMSxz",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\nconst formattedHashtags = (item.draft_hashtags || '')\n  .split(/\\s+/)\n  .filter(Boolean)\n  .map(t => t.startsWith('#') ? t : `#${t}`)\n  .join(' ');\n\nconst final_text = item.post_text  + formattedHashtags;\n\nreturn {\n  json: {\n    ...item,\n    final_text: final_text,\n    final_hashtags: formattedHashtags\n  }\n};"
+      },
+      "id": "186abd2d-8428-4cb0-a5b8-6c4ef820bfd6",
+      "name": "Build Final LinkedIn Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2896,
+        656
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.linkedin.com/v2/ugcPosts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "linkedInOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Restli-Protocol-Version",
+              "value": "2.0.0"
+            },
+            {
+              "name": "=Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"author\": \"urn:li:person:0ktuyxZ1g0\",\n  \"lifecycleState\": \"PUBLISHED\",\n  \"specificContent\": {\n    \"com.linkedin.ugc.ShareContent\": {\n      \"shareCommentary\": {\n        \"text\": \"{{$json.final_text}}\"\n      },\n      \"shareMediaCategory\": \"NONE\"\n    }\n  },\n  \"visibility\": {\n    \"com.linkedin.ugc.MemberNetworkVisibility\": \"PUBLIC\"\n  }\n}",
+        "options": {}
+      },
+      "id": "10540d82-8e06-4d75-b465-8670b99461f3",
+      "name": "LinkedIn Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3136,
+        528
+      ],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "Wmz5GOA0gUeZgqY5",
+          "name": "LinkedIn account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $json.log_channel_id }}",
+          "mode": "id"
+        },
+        "text": "=✅ *Posted to LinkedIn Successfully*\n\n*Status:* {{ $json.statusCode || 'Success' }}\n\n*Preview (first 120 chars):*\n{{ $json.final_text ? $json.final_text.substring(0, 120) : 'N/A' }}...\n\n*Full post length:* {{ $json.final_text ? $json.final_text.length : 0 }} characters",
+        "otherOptions": {}
+      },
+      "id": "21841bb2-6967-435c-a51a-f83cb17df377",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        3536,
+        688
+      ],
+      "webhookId": "c9a09d3a-fb1b-4c78-81d4-3c8b02d57e56",
+      "credentials": {
+        "slackApi": {
+          "id": "qBHktyyLDogsMSxz",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $log.log_channel_id }}",
+          "mode": "id"
+        },
+        "text": "=❌ *Workflow Error*\n\n*Node:* {{ $node.name }}\n*Error:* {{ $json.error?.message || 'Unknown error' }}\n\n*Original message:*\n{{ $json.raw_text || 'N/A' }}\n\n*Stack trace:*\n```{{ $json.error?.stack || 'N/A' }}```",
+        "otherOptions": {}
+      },
+      "id": "c2a8c6db-03ae-4e6c-8364-21a0226c91e0",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        3408,
+        288
+      ],
+      "webhookId": "6b8997a2-b1c7-4335-8438-f7fe93f486a6",
+      "credentials": {
+        "slackApi": {
+          "id": "qBHktyyLDogsMSxz",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "slack/events",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        704,
+        -160
+      ],
+      "id": "9d2ad8cd-4eb4-454e-a6a5-85e1fb283b8b",
+      "name": "Webhook",
+      "webhookId": "b0b2b22e-545a-41b6-bb06-5937d3bacf7a"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? $json;\n\n// Slack URL verification\nif (body.type === 'url_verification' && body.challenge) {\n  return [{ challenge: body.challenge }];\n}\n\n// Slack event callback\nif (body.type === 'event_callback') {\n  const ev = body.event || {};\n  return [{\n    slack_event: ev,\n    text: ev.text,\n    user: ev.user,\n    channel: ev.channel,\n    ts: ev.ts,\n    bot_id: ev.bot_id,\n    subtype: ev.subtype,\n    thread_ts: ev.thread_ts,\n    raw: body\n  }];\n}\n\nreturn [{ raw: body }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1296,
+        -128
+      ],
+      "id": "18febd47-bff0-46a3-b6f1-7cd93d5d1ad6",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1504,
+        -128
+      ],
+      "id": "af9d35ec-49bb-4b78-b294-1652c27d9456",
+      "name": "Respond to Webhook",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/responses",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer sk-xxxx"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{'gpt-4.1-mini'}}\",\n  \"input\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a LinkedIn content writer. Create a detailed, engaging LinkedIn post summary (4-6 sentences, 1 short paragraph). Highlight key insights, implications, and practical takeaways. Do NOT include the URL inside post_text. Instead, the post_link field MUST begin exactly with: \\\"Read more here: \\\" followed by the full article URL. Return ONLY valid JSON with keys: post_text (string), post_link (string), hashtags (array of strings), safety_ok (boolean), notes (string). No markdown.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Slack message:\\n{{ $json.raw_text }}\"\n    }\n  ]\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1408,
+        368
+      ],
+      "id": "e10a44b3-49d4-4c29-93dc-1afb3e32c69b",
+      "name": "HTTP Request",
+      "credentials": {
+        "openAiApi": {
+          "id": "lWyHU7ovhPGdqLIX",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node must return [{ json: {...} }]\nconst item = $input.first().json;\n\n// The OpenAI HTTP Request node response body is already JSON in item.json\n// We want to extract the model's text and parse it into JSON.\n\nconst resp = item; // depending on your node, you may need: item.body\n\n// Try common Responses API locations\nconst text =\n  resp.output?.[0]?.content?.[0]?.text ||\n  resp.output_text ||\n  resp.body?.output?.[0]?.content?.[0]?.text ||\n  resp.body?.output_text ||\n  '';\n\nif (!text) {\n  return [{\n    json: {\n      ok: false,\n      parse_error: true,\n      parse_error_message: 'OpenAI response text not found',\n      openai_raw: resp\n    }\n  }];\n}\n\ntry {\n  const parsed = JSON.parse(text);\n  return [{\n    json: {\n      ok: true,\n      ...parsed,\n      openai_raw: resp\n    }\n  }];\n} catch (e) {\n  return [{\n    json: {\n      ok: false,\n      parse_error: true,\n      parse_error_message: `Failed to parse JSON from OpenAI: ${e.message}`,\n      openai_text: text,\n      openai_raw: resp\n    }\n  }];\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1632,
+        336
+      ],
+      "id": "b5bea569-5d9e-414b-b3c3-61eb4e504990",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "16e29578-700e-4c14-b3af-cb0fa555d171",
+              "name": "log_channel_id",
+              "value": "C0AG7573N0Y",
+              "type": "string"
+            },
+            {
+              "id": "863bd63a-d747-4a5b-b424-33ba7604d7f8",
+              "name": "approval_channel_id",
+              "value": "C0AG7573N0Y",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1856,
+        144
+      ],
+      "id": "20a7685d-5912-414f-b6e1-3518357ec0d4",
+      "name": "Config / Constants"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cc963f88-c8e9-476f-9c68-4577a72f689b",
+              "name": "draft_post_text",
+              "value": "={{ $json.post_text }}",
+              "type": "string"
+            },
+            {
+              "id": "2dd6d47f-bb27-4b9a-9d81-71c6574140db",
+              "name": "=draft_post_link",
+              "value": "={{ $json.post_link }}",
+              "type": "string"
+            },
+            {
+              "id": "bcdcd358-3c29-45c3-8c72-40f6ad533abf",
+              "name": "=draft_hashtags",
+              "value": "={{ ($json.hashtags || []).join(' ') }}",
+              "type": "string"
+            },
+            {
+              "id": "b7bbb981-9592-4649-a9a2-13f5ece6cf0e",
+              "name": "draft_payload",
+              "value": "={{ $json }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2048,
+        672
+      ],
+      "id": "a3b470da-d88a-4f1c-845e-68bd53348ab2",
+      "name": "Store Draft"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2640,
+        688
+      ],
+      "id": "1d7a6148-1190-44b4-ae82-797104ea8cd1",
+      "name": "Merge Draft + Decision"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "16e29578-700e-4c14-b3af-cb0fa555d171",
+              "name": "log_channel_id",
+              "value": "C0AG7573N0Y",
+              "type": "string"
+            },
+            {
+              "id": "863bd63a-d747-4a5b-b424-33ba7604d7f8",
+              "name": "approval_channel_id",
+              "value": "C0AG7573N0Y",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3104,
+        896
+      ],
+      "id": "c0f53a0b-14d2-4d90-be19-1fe1244e3a2d",
+      "name": "Config / Constants1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "16e29578-700e-4c14-b3af-cb0fa555d171",
+              "name": "log_channel_id",
+              "value": "C0AG7573N0Y",
+              "type": "string"
+            },
+            {
+              "id": "863bd63a-d747-4a5b-b424-33ba7604d7f8",
+              "name": "approval_channel_id",
+              "value": "C0AG7573N0Y",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2960,
+        128
+      ],
+      "id": "c573e716-ef0d-4053-b16b-4a44ec02da92",
+      "name": "Config / Constants2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Ignore Rules": {
+      "main": [
+        [
+          {
+            "node": "Stop",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Input": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Parse Error": {
+      "main": [
+        [
+          {
+            "node": "Log Parse Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Safety Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Safety Gate": {
+      "main": [
+        [
+          {
+            "node": "Log Safety Failure",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Store Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send For Approval": {
+      "main": [
+        [
+          {
+            "node": "Wait For Approval Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait For Approval Reply": {
+      "main": [
+        [
+          {
+            "node": "Merge Draft + Decision",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Approval Decision": {
+      "main": [
+        [
+          {
+            "node": "Build Final LinkedIn Text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Config / Constants2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Final LinkedIn Text": {
+      "main": [
+        [
+          {
+            "node": "LinkedIn Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LinkedIn Post": {
+      "main": [
+        [
+          {
+            "node": "Config / Constants1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Ignore Rules",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Config / Constants",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config / Constants": {
+      "main": [
+        [
+          {
+            "node": "Check Parse Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Draft": {
+      "main": [
+        [
+          {
+            "node": "Merge Draft + Decision",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send For Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Draft + Decision": {
+      "main": [
+        [
+          {
+            "node": "Approval Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Rejection": {
+      "main": [
+        [
+          {
+            "node": "Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config / Constants1": {
+      "main": [
+        [
+          {
+            "node": "Log Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config / Constants2": {
+      "main": [
+        [
+          {
+            "node": "Log Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "b91c6a47-0ca0-4b15-9522-10e3842f72f3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8104b931df9cff9d75c598c48a922ad3894b2002442349bf0b526e50abda9811"
+  },
+  "id": "TRyROuOalZamMn9F",
+  "tags": []
+}
