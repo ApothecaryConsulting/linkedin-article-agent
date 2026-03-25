@@ -508,9 +508,4 @@ Anyone following this README should be able to stand up the full pipeline on the
 
 ---
 
-If you want, I can also provide:
-- A hardened production `docker-compose.yml`
-- A troubleshooting decision tree
-- A video walkthrough outline
-- A GitHub template repo
 
