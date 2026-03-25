@@ -1,4 +1,6 @@
-# Slack → OpenAI → Approval → LinkedIn (n8n Workflow)
+# Slack → OpenAI → LinkedIn Publisher
+
+An n8n workflow that listens for messages in a Slack channel, uses OpenAI (GPT-4.1 mini) to generate a polished LinkedIn post draft, routes it through a human approval gate, and then publishes it to LinkedIn — all with structured error logging back to Slack.
 
 This repository contains everything needed to run an **end-to-end automation** that:
 
@@ -306,6 +308,178 @@ In n8n:
 - Never commit `n8n_data/`
 - Credentials are encrypted locally using `N8N_ENCRYPTION_KEY`
 
+---
+## Overview
+
+| Property | Value |
+|---|---|
+| Trigger | Slack event webhook (message posted in a channel) |
+| AI Model | `gpt-4.1-mini` via OpenAI Responses API |
+| Approval | Human-in-the-loop via Slack reply |
+| Output | LinkedIn post (via HTTP API) |
+| Logging | Slack channel notifications for all outcomes |
+| Total Nodes | 25 |
+
+---
+
+## How It Works
+
+### 1. Trigger — Slack Webhook
+The workflow starts when Slack sends an event to an n8n webhook. A JavaScript code node handles Slack's URL verification challenge and normalises the incoming event payload (extracting `text`, `user`, `channel`, `ts`, etc.).
+
+### 2. Ignore Rules
+Before doing anything expensive, a filter node drops messages that should be skipped:
+- Message starts with `!skip`
+- Message text is empty
+- Message was sent by a bot (`bot_id` is present)
+- Message is a thread reply (`thread_ts` is present)
+
+Filtered messages go to a **Stop** (no-op) node. Valid messages continue.
+
+### 3. Respond to Webhook (Immediately)
+A `Respond to Webhook` node fires in parallel immediately after the initial parse — this acknowledges Slack's event delivery within the required 3-second window so Slack doesn't retry.
+
+### 4. Prepare Input
+Extracts and renames the fields needed downstream into a clean object: `raw_text`, `source_channel`, `source_user`, `source_ts`.
+
+### 5. OpenAI API Call
+Sends the Slack message text to `https://api.openai.com/v1/responses` with a structured system prompt instructing the model to return a JSON object containing:
+
+| Field | Description |
+|---|---|
+| `post_text` | 4–6 sentence LinkedIn post body |
+| `post_link` | `"Read more here: <url>"` (the article link, separate from post text) |
+| `hashtags` | Array of relevant hashtag strings |
+| `safety_ok` | Boolean — whether the content is safe to post |
+| `notes` | Any caveats or rejection reasons from the model |
+
+### 6. Parse OpenAI Response
+A JavaScript code node extracts the model's text output from the Responses API structure and parses it as JSON. If parsing fails, it returns an error flag and the raw response for logging.
+
+### 7. Config / Constants
+Sets shared runtime constants used throughout the rest of the workflow:
+- `log_channel_id` — Slack channel ID for all log/error messages
+- `approval_channel_id` — Slack channel ID where approval requests are sent
+
+### 8. Check Parse Error
+If the OpenAI response couldn't be parsed as valid JSON, the workflow branches to **Log Parse Error**, which posts a ⚠️ message to the log Slack channel including the error, the original Slack message, and the raw OpenAI response.
+
+### 9. Safety Gate
+If `safety_ok` is `false`, the workflow branches to **Log Safety Failure**, which posts a 🛑 message to the log channel with the model's rejection reason and any safer alternative it suggested.
+
+### 10. Human Approval Loop
+If the content passes the safety check:
+
+1. **Store Draft** — saves the draft post fields into state for later merging.
+2. **Send For Approval** — posts the draft LinkedIn post to the approval Slack channel, asking for a reply of `approve` or `reject`.
+3. **Wait For Approval Reply** — the workflow pauses here using n8n's Wait node until a Slack reply comes back.
+4. **Merge Draft + Decision** — merges the stored draft with the approval reply.
+5. **Approval Decision** — checks whether the reply contains `approve`.
+
+### 11. On Approval — Publish to LinkedIn
+1. **Build Final LinkedIn Text** — formats hashtags (ensures each starts with `#`) and concatenates them onto the post text to produce `final_text`.
+2. **LinkedIn Post** — sends an HTTP POST request to the LinkedIn API to publish the post.
+3. **Log Success** — posts a ✅ confirmation to the Slack log channel.
+
+### 12. On Rejection — Log and Stop
+If the approver replied with anything other than `approve`, the workflow logs a rejection message to the Slack channel and stops.
+
+---
+
+## Workflow Diagram
+
+```
+Slack Webhook
+     │
+     ├──► Respond to Webhook (immediate 200 OK)
+     │
+Code: Parse Slack Event
+     │
+Ignore Rules ──► [Stop]
+     │
+Prepare Input
+     │
+OpenAI API Call (gpt-4.1-mini)
+     │
+Code: Parse JSON Response
+     │
+Config / Constants
+     │
+Check Parse Error ──► [Log Parse Error → Slack]
+     │
+Safety Gate ──► [Log Safety Failure → Slack]
+     │
+Store Draft ──► Send For Approval → Wait For Reply
+                                         │
+                              Merge Draft + Decision
+                                         │
+                               Approval Decision
+                              ┌──────────┴──────────┐
+                          [Approved]            [Rejected]
+                              │                     │
+                  Build Final LinkedIn Text   Config/Constants2
+                              │                     │
+                        LinkedIn Post         Log Rejection
+                              │                     │
+                   Config / Constants1        Log Error → Slack
+                              │
+                        Log Success → Slack
+```
+
+---
+
+## Setup & Configuration
+
+### Required Credentials
+
+| Service | Credential Type | Where Used |
+|---|---|---|
+| Slack | Slack API (Bot Token) | Webhook trigger, all Slack nodes |
+| OpenAI | OpenAI API Key | HTTP Request node (Bearer token) |
+| LinkedIn | LinkedIn API Token | LinkedIn Post HTTP Request node |
+
+### Slack App Requirements
+Your Slack app must have the following enabled:
+- **Event Subscriptions** — point the Request URL to the n8n webhook URL for this workflow
+- Subscribe to **`message.channels`** bot event (or whichever channel scope applies)
+- **Bot Token Scopes:** `chat:write`, `channels:history`, `channels:read`
+
+### Channel IDs to Configure
+Update the three **Config / Constants** nodes with your actual Slack channel IDs:
+
+| Variable | Description |
+|---|---|
+| `log_channel_id` | Channel where errors, safety failures, rejections, and successes are posted |
+| `approval_channel_id` | Channel where draft posts are sent for human review |
+
+### OpenAI Model
+The workflow uses `gpt-4.1-mini`. To use a different model, update the `jsonBody` in the **HTTP Request** node.
+
+---
+
+## Skipping Messages
+
+Any message posted to the monitored Slack channel that starts with `!skip` will be silently ignored. This is useful for posting notes or links you don't want turned into LinkedIn posts.
+
+---
+
+## Error Handling
+
+| Scenario | Behaviour |
+|---|---|
+| OpenAI JSON parse failure | Logs raw response + error to Slack log channel |
+| Content fails safety check | Logs reason + safer alternative suggestion to Slack log channel |
+| Post rejected by approver | Logs rejection to Slack log channel |
+| LinkedIn post failure | (Handled by downstream error branch — check your n8n error workflow settings) |
+
+---
+
+## Notes
+
+- The workflow acknowledges Slack's webhook immediately in a parallel branch to avoid Slack retrying the event.
+- The Wait node will hold the execution until the approver replies in Slack. Make sure your n8n instance's execution timeout is set high enough (or use the n8n Cloud plan which supports long-running executions).
+- Hashtags from OpenAI are automatically normalised — any tag missing a leading `#` gets one added before posting.
+- The `post_link` field (the article URL) is kept separate from `post_text` by the AI prompt, so you can format the LinkedIn post however you like before publishing.
 ---
 
 ## Optional Improvements
