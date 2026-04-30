@@ -791,6 +791,19 @@
           "name": "LinkedIn account"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst mechanism = item.value.uploadMechanism[\n  'com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'\n];\nreturn {\n  json: {\n    ...item,\n    upload_url: mechanism.uploadUrl,\n    asset_urn: item.value.asset\n  }\n};"
+      },
+      "id": "77e6beef-46e3-4f24-a002-4dfd0ce6c974",
+      "name": "Extract Upload Details",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4180,
+        496
+      ]
     }
   ],
   "pinData": {},
@@ -1087,6 +1100,17 @@
         [
           {
             "node": "Extract Upload Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Upload Details": {
+      "main": [
+        [
+          {
+            "node": "Fetch Image Binary",
             "type": "main",
             "index": 0
           }
