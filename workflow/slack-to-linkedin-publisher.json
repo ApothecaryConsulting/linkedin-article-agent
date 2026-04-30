@@ -247,7 +247,7 @@
           "mode": "id"
         },
         "messageType": "block",
-        "blocksUi": "={\n  \"text\": \"LinkedIn Post Ready for Approval\",\n  \"blocks\": [\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*LinkedIn Post Ready for Approval*\\n\\n*Draft:*\\n{{ $json.post_text }}\\n{{ $json.post_link }}\\n{{ $json.hashtags }}\"\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": { \"type\": \"plain_text\", \"text\": \"Approve\" },\n          \"style\": \"primary\",\n          \"url\": \"{{ ($execution.resumeUrl || '') }}&decision=approve\"\n        },\n        {\n          \"type\": \"button\",\n          \"text\": { \"type\": \"plain_text\", \"text\": \"Reject\" },\n          \"style\": \"danger\",\n          \"url\": \"{{ ($execution.resumeUrl || '') }}&decision=reject\"\n        }\n      ]\n    }\n  ]\n}\n",
+        "blocksUi": "={{ $json.approval_blocks.replace(/__RESUME_URL__/g, $execution.resumeUrl || '') }}",
         "text": "=*LinkedIn Post Ready for Approval*\n\nDraft:\n{{ $json.post_text }}\n{{ $json.hashtags }}\n\nApprove:\n{{ $execution.resumeUrl }}&decision=approve\n\nReject:\n{{ $execution.resumeUrl }}&decision=reject\n",
         "otherOptions": {}
       },
@@ -256,8 +256,8 @@
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2.2,
       "position": [
-        2272,
-        496
+        3168,
+        400
       ],
       "webhookId": "9f48233a-a64a-443e-8496-6a015d416fee",
       "credentials": {
@@ -279,8 +279,8 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        2464,
-        496
+        3392,
+        400
       ],
       "webhookId": "auto-generated-wait"
     },
@@ -346,7 +346,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst formattedHashtags = (item.draft_hashtags || '')\n  .split(/\\s+/)\n  .filter(Boolean)\n  .map(t => t.startsWith('#') ? t : `#${t}`)\n  .join(' ');\n\nconst postLink = item.post_link ? `\\n\\n${item.post_link}` : '';\nconst hashtagSection = formattedHashtags ? `\\n\\n${formattedHashtags}` : '';\nconst final_text = item.post_text + postLink + hashtagSection;\n\nreturn {\n  json: {\n    ...item,\n    final_text: final_text,\n    final_hashtags: formattedHashtags\n  }\n};"
+        "jsCode": "const item = $input.first().json;\nconst formattedHashtags = (item.draft_hashtags || '')\n  .split(/\\s+/)\n  .filter(Boolean)\n  .map(t => t.startsWith('#') ? t : `#${t}`)\n  .join(' ');\n\nconst postLink = item.post_link ? `\\n\\n${item.post_link}` : '';\nconst hashtagSection = formattedHashtags ? `\\n\\n${formattedHashtags}` : '';\nconst final_text = item.post_text + postLink + hashtagSection;\n\nreturn {\n  json: {\n    ...item,\n    final_text: final_text,\n    final_hashtags: formattedHashtags,\n    image_url: item.draft_image_url || null\n  }\n};"
       },
       "id": "186abd2d-8428-4cb0-a5b8-6c4ef820bfd6",
       "name": "Build Final LinkedIn Text",
@@ -577,6 +577,12 @@
               "name": "draft_payload",
               "value": "={{ $json }}",
               "type": "string"
+            },
+            {
+              "id": "e8f9a0b1-c2d3-4e5f-a6b7-c8d9e0f1a2b3",
+              "name": "draft_image_url",
+              "value": "={{ $json.image_url }}",
+              "type": "string"
             }
           ]
         },
@@ -586,8 +592,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2048,
-        672
+        2720,
+        400
       ],
       "id": "a3b470da-d88a-4f1c-845e-68bd53348ab2",
       "name": "Store Draft"
@@ -685,8 +691,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3300,
-        656
+        2272,
+        400
       ]
     },
     {
@@ -698,8 +704,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3520,
-        656
+        2496,
+        400
       ]
     },
     {
@@ -897,6 +903,19 @@
           "name": "LinkedIn account"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst imageBlock = item.image_url ? [{\n  type: 'image',\n  image_url: item.image_url,\n  alt_text: 'Article preview'\n}] : [];\n\nconst postText = item.post_text || '';\nconst postLink = item.post_link || '';\nconst hashtags = item.draft_hashtags || '';\n\nconst blocks = {\n  text: 'LinkedIn Post Ready for Approval',\n  blocks: [\n    {\n      type: 'section',\n      text: {\n        type: 'mrkdwn',\n        text: `*LinkedIn Post Ready for Approval*\\n\\n*Draft:*\\n${postText}\\n${postLink}\\n${hashtags}`\n      }\n    },\n    ...imageBlock,\n    {\n      type: 'actions',\n      elements: [\n        {\n          type: 'button',\n          text: { type: 'plain_text', text: 'Approve' },\n          style: 'primary',\n          url: '__RESUME_URL__&decision=approve'\n        },\n        {\n          type: 'button',\n          text: { type: 'plain_text', text: 'Reject' },\n          style: 'danger',\n          url: '__RESUME_URL__&decision=reject'\n        }\n      ]\n    }\n  ]\n};\n\nreturn { json: { ...item, approval_blocks: JSON.stringify(blocks) } };"
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Build Approval Blocks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2944,
+        400
+      ]
     }
   ],
   "pinData": {},
@@ -959,7 +978,7 @@
         ],
         [
           {
-            "node": "Store Draft",
+            "node": "Fetch Article Page",
             "type": "main",
             "index": 0
           }
@@ -1010,7 +1029,7 @@
       "main": [
         [
           {
-            "node": "Fetch Article Page",
+            "node": "Has Image?",
             "type": "main",
             "index": 0
           }
@@ -1086,6 +1105,17 @@
             "index": 0
           },
           {
+            "node": "Build Approval Blocks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Approval Blocks": {
+      "main": [
+        [
+          {
             "node": "Send For Approval",
             "type": "main",
             "index": 0
@@ -1152,7 +1182,7 @@
       "main": [
         [
           {
-            "node": "Has Image?",
+            "node": "Store Draft",
             "type": "main",
             "index": 0
           }
