@@ -1,0 +1,8 @@
+n8n_data/
+.env
+.git/
+*.log
+.claude/
+workflow/
+scripts/
+README.md

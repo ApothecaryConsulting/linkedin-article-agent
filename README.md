@@ -9,26 +9,21 @@ This repository contains everything needed to run an **end-to-end automation** t
 3. Sends the draft to Slack for approval
 4. Posts the approved content to LinkedIn (personal or company page)
 
-The workflow is built in **n8n**, runs locally via **Docker**, and uses **ngrok** for Slack webhooks.
+The workflow is built in **n8n**, runs locally via **Docker**, and uses **ngrok** for Slack webhooks — ngrok is bundled inside the Docker image, so no separate installation is required.
 
 ---
 
 ## Architecture Overview
 
-```
-Slack (Events API)
-   ↓
-n8n Webhook
-   ↓
-OpenAI (Draft LinkedIn Post)
-   ↓
-Slack (Approval Message)
-   ↓
-Wait for Approval (Webhook)
-   ↓
-Decision Logic
-   ↓
-LinkedIn Post (Personal or Company)
+```mermaid
+flowchart TD
+    A([Slack Events API]) --> B[n8n Webhook]
+    B --> C[OpenAI\nDraft LinkedIn Post]
+    C --> D[Slack\nApproval Message]
+    D --> E[Wait for Approval\nWebhook]
+    E --> F{Decision Logic}
+    F -->|Approved| G([LinkedIn Post\nPersonal or Company])
+    F -->|Rejected| H([Log Rejection → Slack])
 ```
 
 ---
@@ -40,11 +35,11 @@ Each teammate must install the following **locally**:
 ### Required Software
 - **Docker Desktop**  
   https://www.docker.com/products/docker-desktop
-- **ngrok**  
-  https://ngrok.com/download
 - **Git**  
   https://git-scm.com/
 - A modern browser (Chrome recommended)
+
+> **ngrok is bundled inside the Docker image.** No separate ngrok download or installation is needed.
 
 ### Required Accounts
 - Slack workspace where you can create apps
@@ -56,18 +51,19 @@ Each teammate must install the following **locally**:
 ## Repository Structure
 
 ```
-slack-to-linkedin-n8n/
+linkedin-article-agent/
 │
+├── Dockerfile                  ← Custom image: n8n + ngrok
 ├── docker-compose.yml
-├── env.example
+├── docker-entrypoint.sh        ← Starts ngrok (optional) then n8n
+├── .dockerignore
 ├── .gitignore
 │
-├── workflows/
-│   └── slack_to_linkedin_approval.json
+├── workflow/
+│   └── Slack → OpenAI → LinkedIn Publisher.json
 │
 ├── scripts/
-│   ├── start.ps1
-│   └── start.sh
+│   └── script.p1
 │
 └── README.md
 ```
@@ -91,7 +87,7 @@ Copy the example file and fill in placeholders.
 cp env.example .env
 ```
 
-### `env.example` explained
+### `.env` variables explained
 
 ```env
 # n8n runtime
@@ -99,10 +95,12 @@ N8N_HOST=localhost
 N8N_PORT=5678
 N8N_PROTOCOL=http
 
-# This must match your ngrok https URL
+# Public base URL used in webhook URLs and approval button links.
+# Set to your ngrok domain (or any public hostname if not using ngrok).
 WEBHOOK_URL=https://YOUR_NGROK_DOMAIN
+N8N_EDITOR_BASE_URL=https://YOUR_NGROK_DOMAIN
 
-# Required for credential encryption (set once)
+# Required for credential encryption (set once, never change)
 N8N_ENCRYPTION_KEY=REPLACE_WITH_RANDOM_32_CHAR_STRING
 
 # Slack channels (IDs, not names)
@@ -111,6 +109,10 @@ APPROVAL_CHANNEL_ID=C045XYZ123
 
 # OpenAI
 OPENAI_MODEL=gpt-4.1-mini
+OPENAI_API_KEY=sk-...
+
+# Anthropic (optional, if using Claude instead of OpenAI)
+# ANTHROPIC_API_KEY=sk-ant-...
 
 # LinkedIn
 # Personal posting:
@@ -118,38 +120,54 @@ LINKEDIN_AUTHOR_URN=urn:li:person:XXXXXXXX
 
 # Company posting (optional):
 # LINKEDIN_ORG_URN=urn:li:organization:XXXXXXXX
+
+# ngrok — both are optional.
+# Omit NGROK_AUTHTOKEN entirely to disable ngrok (n8n still starts normally).
+NGROK_AUTHTOKEN=YOUR_NGROK_AUTHTOKEN
+# Pin to a free-tier static domain so the URL never changes on restart:
+NGROK_DOMAIN=your-static-subdomain.ngrok-free.app
 ```
 
 ⚠️ **Never commit `.env` to GitHub**
 
 ---
 
-## Step 3 — Start n8n (Docker)
+## Step 3 — Build and Start the Container
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 
+This builds the custom image (n8n + ngrok), then starts the container.
+
 Verify:
-- n8n UI opens at: http://localhost:5678
+- n8n UI: http://localhost:5678
+- ngrok: started automatically inside the container when `NGROK_AUTHTOKEN` is set in `.env`
+
+To confirm ngrok is running:
+
+```bash
+docker compose logs n8n | grep -i ngrok
+```
 
 ---
 
-## Step 4 — Start ngrok
+## Step 4 — Confirm the ngrok Tunnel URL
 
-In a **separate terminal**:
+If you set `NGROK_DOMAIN` in `.env`, your tunnel URL is fixed and never changes — skip the rest of this step.
+
+If you did **not** set `NGROK_DOMAIN`, inspect the container logs to find the assigned URL:
 
 ```bash
-ngrok http 5678
+docker compose logs n8n
 ```
 
-You will see output like:
-
+Look for a line like:
 ```
 Forwarding https://revisional-xxxxx.ngrok-free.dev -> http://localhost:5678
 ```
 
-👉 **Copy the HTTPS ngrok URL** — you will need it multiple times.
+👉 **Copy the HTTPS ngrok URL** — you will need it in the Slack app setup below.
 
 ---
 
@@ -247,15 +265,17 @@ Company posting:
 
 ---
 
-## Step 9 — Update Webhook URLs After Restart
+## Step 9 — Webhook URLs After Restart
 
-Every time ngrok restarts:
+**If `NGROK_DOMAIN` is set** (recommended): the tunnel URL is static and never changes — no action needed on restart.
 
-1. Copy new ngrok URL
+**If `NGROK_DOMAIN` is not set**: ngrok assigns a new random URL every time the container restarts. When that happens:
+
+1. Get the new ngrok URL from container logs: `docker compose logs n8n`
 2. Update:
    - Slack Event Subscriptions → Request URL
-   - `.env` → `WEBHOOK_URL`
-3. Restart n8n if `.env` changed
+   - `.env` → `WEBHOOK_URL` and `N8N_EDITOR_BASE_URL`
+3. Restart the container: `docker compose restart`
 
 ---
 
@@ -484,7 +504,7 @@ Any message posted to the monitored Slack channel that starts with `!skip` will 
 
 ## Optional Improvements
 
-- Replace ngrok with Cloudflare Tunnel
+- Replace ngrok with Cloudflare Tunnel (edit `docker-entrypoint.sh` to call `cloudflared` instead)
 - Add Docker health checks
 - Add retry logic for LinkedIn/OpenAI
 - Convert to multi-tenant SaaS
@@ -494,10 +514,11 @@ Any message posted to the monitored Slack channel that starts with `!skip` will 
 ## Support
 
 If something breaks:
-1. Check ngrok is running
-2. Check workflow is Active
-3. Check Slack Event Subscriptions show **Verified**
-4. Check n8n execution logs
+1. Check container logs: `docker compose logs n8n`
+2. Verify ngrok tunnel is up (look for `Forwarding https://...` in logs)
+3. Check workflow is Active in n8n
+4. Check Slack Event Subscriptions show **Verified**
+5. Check n8n execution logs
 
 ---
 
