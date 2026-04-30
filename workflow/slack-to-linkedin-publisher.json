@@ -848,6 +848,41 @@
           "name": "LinkedIn account"
         }
       }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.linkedin.com/v2/ugcPosts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "linkedInOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Restli-Protocol-Version",
+              "value": "2.0.0"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"author\": \"={{ $json.person_urn }}\",\n  \"lifecycleState\": \"PUBLISHED\",\n  \"specificContent\": {\n    \"com.linkedin.ugc.ShareContent\": {\n      \"shareCommentary\": {\n        \"text\": \"={{ $json.final_text }}\"\n      },\n      \"shareMediaCategory\": \"IMAGE\",\n      \"media\": [\n        {\n          \"status\": \"READY\",\n          \"media\": \"={{ $json.asset_urn }}\"\n        }\n      ]\n    }\n  },\n  \"visibility\": {\n    \"com.linkedin.ugc.MemberNetworkVisibility\": \"PUBLIC\"\n  }\n}",
+        "options": {}
+      },
+      "id": "dbf2de4a-6a58-4528-ba58-796882f4c262",
+      "name": "Publish to LinkedIn (with image)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4840,
+        496
+      ],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "HHKrfv4Oqo0pv7UX",
+          "name": "LinkedIn account"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -1177,6 +1212,17 @@
         [
           {
             "node": "Publish to LinkedIn (with image)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish to LinkedIn (with image)": {
+      "main": [
+        [
+          {
+            "node": "Set Channel IDs (Success)",
             "type": "main",
             "index": 0
           }
