@@ -81,10 +81,10 @@ cd slack-to-linkedin-n8n
 
 ## Step 2 — Create `.env` File
 
-Copy the example file and fill in placeholders.
+Copy the example file and fill in the placeholders.
 
 ```bash
-cp env.example .env
+cp .env.example .env
 ```
 
 ### `.env` variables explained
@@ -94,39 +94,19 @@ cp env.example .env
 N8N_HOST=localhost
 N8N_PORT=5678
 N8N_PROTOCOL=http
+N8N_EDITOR_BASE_URL=https://your-ngrok-domain.ngrok-free.app
+N8N_ENCRYPTION_KEY=                    # generate: openssl rand -hex 16
+N8N_BLOCK_ENV_ACCESS_IN_NODE=false
 
-# Public base URL used in webhook URLs and approval button links.
-# Set to your ngrok domain (or any public hostname if not using ngrok).
-WEBHOOK_URL=https://YOUR_NGROK_DOMAIN
-N8N_EDITOR_BASE_URL=https://YOUR_NGROK_DOMAIN
+# Public base URL used for webhook callbacks and approval button links
+WEBHOOK_URL=https://your-ngrok-domain.ngrok-free.app
 
-# Required for credential encryption (set once, never change)
-N8N_ENCRYPTION_KEY=REPLACE_WITH_RANDOM_32_CHAR_STRING
-
-# Slack channels (IDs, not names)
-LOG_CHANNEL_ID=C012ABCDEF
-APPROVAL_CHANNEL_ID=C045XYZ123
-
-# OpenAI
-OPENAI_MODEL=gpt-4.1-mini
-OPENAI_API_KEY=sk-...
-
-# Anthropic (optional, if using Claude instead of OpenAI)
-# ANTHROPIC_API_KEY=sk-ant-...
-
-# LinkedIn
-# Personal posting:
-LINKEDIN_AUTHOR_URN=urn:li:person:XXXXXXXX
-
-# Company posting (optional):
-# LINKEDIN_ORG_URN=urn:li:organization:XXXXXXXX
-
-# ngrok — both are optional.
-# Omit NGROK_AUTHTOKEN entirely to disable ngrok (n8n still starts normally).
-NGROK_AUTHTOKEN=YOUR_NGROK_AUTHTOKEN
-# Pin to a free-tier static domain so the URL never changes on restart:
-NGROK_DOMAIN=your-static-subdomain.ngrok-free.app
+# ngrok — omit NGROK_AUTHTOKEN entirely to disable ngrok
+NGROK_AUTHTOKEN=                       # from https://dashboard.ngrok.com
+# NGROK_DOMAIN=your-static-subdomain.ngrok-free.app  # optional static domain
 ```
+
+> **Service credentials** (OpenAI API key, Slack Bot Token, LinkedIn OAuth) are stored inside n8n's encrypted database and configured via the n8n UI — they are not read from `.env`.
 
 ⚠️ **Never commit `.env` to GitHub**
 
