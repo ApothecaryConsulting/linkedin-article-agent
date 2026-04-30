@@ -1,5 +1,5 @@
 {
-  "name": "Slack → OpenAI → LinkedIn Publisher",
+  "name": "Slack \u2192 OpenAI \u2192 LinkedIn Publisher",
   "nodes": [
     {
       "parameters": {
@@ -67,7 +67,7 @@
     {
       "parameters": {},
       "id": "9cc22384-891b-4d72-a027-5f9f08c4dd9d",
-      "name": "Stop",
+      "name": "Filtered Out",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
@@ -158,7 +158,7 @@
           "value": "={{ $json.log_channel_id }}",
           "mode": "id"
         },
-        "text": "=⚠️ *JSON Parse Error*\n\n*Error:* {{ $json.error_message }}\n\n*Original Slack message:*\n{{ $json.raw_text }}\n\n*Raw OpenAI response:*\n```{{ JSON.stringify($json.raw_response, null, 2) }}```",
+        "text": "=\u26a0\ufe0f *JSON Parse Error*\n\n*Error:* {{ $json.error_message }}\n\n*Original Slack message:*\n{{ $json.raw_text }}\n\n*Raw OpenAI response:*\n```{{ JSON.stringify($json.raw_response, null, 2) }}```",
         "otherOptions": {}
       },
       "id": "562c9bf8-b85c-4c46-a00f-0730f0953596",
@@ -219,7 +219,7 @@
           "value": "={{ $json.log_channel_id}}",
           "mode": "id"
         },
-        "text": "=🛑 *Safety Check Failed*\n\n*Reason:* {{ $json.notes }}\n\n*Original Slack message:*\n{{ $json.raw_text }}\n\n*Safer alternative suggested:*\n{{ $json.post_text }}",
+        "text": "=\ud83d\uded1 *Safety Check Failed*\n\n*Reason:* {{ $json.notes }}\n\n*Original Slack message:*\n{{ $json.raw_text }}\n\n*Safer alternative suggested:*\n{{ $json.post_text }}",
         "otherOptions": {}
       },
       "id": "5c9cf7e8-0b4b-4336-a43e-cad16afbaf58",
@@ -325,7 +325,7 @@
           "value": "={{ $json.log_channel_id}}",
           "mode": "id"
         },
-        "text": "=❌ *LinkedIn Post Rejected*\n\nPost was not approved for publishing.",
+        "text": "=\u274c *LinkedIn Post Rejected*\n\nPost was not approved for publishing.",
         "otherOptions": {}
       },
       "id": "a0846faa-8bc4-449c-891b-486d053ad64b",
@@ -365,7 +365,7 @@
           "value": "={{ $json.log_channel_id }}",
           "mode": "id"
         },
-        "text": "=✅ *Posted to LinkedIn Successfully*\n\n*Status:* {{ $json.statusCode || 'Success' }}\n\n*Preview (first 120 chars):*\n{{ $json.final_text ? $json.final_text.substring(0, 120) : 'N/A' }}...\n\n*Full post length:* {{ $json.final_text ? $json.final_text.length : 0 }} characters",
+        "text": "=\u2705 *Posted to LinkedIn Successfully*\n\n*Status:* {{ $json.statusCode || 'Success' }}\n\n*Preview (first 120 chars):*\n{{ $json.final_text ? $json.final_text.substring(0, 120) : 'N/A' }}...\n\n*Full post length:* {{ $json.final_text ? $json.final_text.length : 0 }} characters",
         "otherOptions": {}
       },
       "id": "21841bb2-6967-435c-a51a-f83cb17df377",
@@ -392,7 +392,7 @@
           "value": "={{ $log.log_channel_id }}",
           "mode": "id"
         },
-        "text": "=❌ *Workflow Error*\n\n*Node:* {{ $node.name }}\n*Error:* {{ $json.error?.message || 'Unknown error' }}\n\n*Original message:*\n{{ $json.raw_text || 'N/A' }}\n\n*Stack trace:*\n```{{ $json.error?.stack || 'N/A' }}```",
+        "text": "=\u274c *Workflow Error*\n\n*Node:* {{ $node.name }}\n*Error:* {{ $json.error?.message || 'Unknown error' }}\n\n*Original message:*\n{{ $json.raw_text || 'N/A' }}\n\n*Stack trace:*\n```{{ $json.error?.stack || 'N/A' }}```",
         "otherOptions": {}
       },
       "id": "c2a8c6db-03ae-4e6c-8364-21a0226c91e0",
@@ -425,7 +425,7 @@
         -160
       ],
       "id": "9d2ad8cd-4eb4-454e-a6a5-85e1fb283b8b",
-      "name": "Webhook",
+      "name": "Slack Webhook",
       "webhookId": "b0b2b22e-545a-41b6-bb06-5937d3bacf7a"
     },
     {
@@ -439,7 +439,7 @@
         -128
       ],
       "id": "18febd47-bff0-46a3-b6f1-7cd93d5d1ad6",
-      "name": "Code in JavaScript"
+      "name": "Parse Slack Event"
     },
     {
       "parameters": {
@@ -493,7 +493,7 @@
         368
       ],
       "id": "e10a44b3-49d4-4c29-93dc-1afb3e32c69b",
-      "name": "HTTP Request",
+      "name": "OpenAI: Generate Draft",
       "credentials": {
         "openAiApi": {
           "id": "lWyHU7ovhPGdqLIX",
@@ -512,7 +512,7 @@
         336
       ],
       "id": "b5bea569-5d9e-414b-b3c3-61eb4e504990",
-      "name": "Code in JavaScript1"
+      "name": "Parse OpenAI Response"
     },
     {
       "parameters": {
@@ -542,7 +542,7 @@
         144
       ],
       "id": "20a7685d-5912-414f-b6e1-3518357ec0d4",
-      "name": "Config / Constants"
+      "name": "Set Channel IDs"
     },
     {
       "parameters": {
@@ -629,7 +629,7 @@
         912
       ],
       "id": "c0f53a0b-14d2-4d90-be19-1fe1244e3a2d",
-      "name": "Config / Constants1"
+      "name": "Set Channel IDs (Success)"
     },
     {
       "parameters": {
@@ -659,7 +659,7 @@
         128
       ],
       "id": "c573e716-ef0d-4053-b16b-4a44ec02da92",
-      "name": "Config / Constants2"
+      "name": "Set Channel IDs (Rejection)"
     },
     {
       "parameters": {
@@ -674,7 +674,7 @@
         656
       ],
       "id": "86571c9d-d9ea-4e7e-bb75-31c58e8054e3",
-      "name": "Create a post",
+      "name": "Publish to LinkedIn",
       "credentials": {
         "linkedInOAuth2Api": {
           "id": "HHKrfv4Oqo0pv7UX",
@@ -689,7 +689,7 @@
       "main": [
         [
           {
-            "node": "Stop",
+            "node": "Filtered Out",
             "type": "main",
             "index": 0
           }
@@ -707,7 +707,7 @@
       "main": [
         [
           {
-            "node": "HTTP Request",
+            "node": "OpenAI: Generate Draft",
             "type": "main",
             "index": 0
           }
@@ -783,7 +783,7 @@
         ],
         [
           {
-            "node": "Config / Constants2",
+            "node": "Set Channel IDs (Rejection)",
             "type": "main",
             "index": 0
           }
@@ -794,25 +794,25 @@
       "main": [
         [
           {
-            "node": "Create a post",
+            "node": "Publish to LinkedIn",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Webhook": {
+    "Slack Webhook": {
       "main": [
         [
           {
-            "node": "Code in JavaScript",
+            "node": "Parse Slack Event",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code in JavaScript": {
+    "Parse Slack Event": {
       "main": [
         [
           {
@@ -828,29 +828,29 @@
         ]
       ]
     },
-    "HTTP Request": {
+    "OpenAI: Generate Draft": {
       "main": [
         [
           {
-            "node": "Code in JavaScript1",
+            "node": "Parse OpenAI Response",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code in JavaScript1": {
+    "Parse OpenAI Response": {
       "main": [
         [
           {
-            "node": "Config / Constants",
+            "node": "Set Channel IDs",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Config / Constants": {
+    "Set Channel IDs": {
       "main": [
         [
           {
@@ -899,7 +899,7 @@
         ]
       ]
     },
-    "Config / Constants1": {
+    "Set Channel IDs (Success)": {
       "main": [
         [
           {
@@ -910,7 +910,7 @@
         ]
       ]
     },
-    "Config / Constants2": {
+    "Set Channel IDs (Rejection)": {
       "main": [
         [
           {
@@ -921,11 +921,11 @@
         ]
       ]
     },
-    "Create a post": {
+    "Publish to LinkedIn": {
       "main": [
         [
           {
-            "node": "Config / Constants1",
+            "node": "Set Channel IDs (Success)",
             "type": "main",
             "index": 0
           }
