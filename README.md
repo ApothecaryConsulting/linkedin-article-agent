@@ -101,6 +101,9 @@ WEBHOOK_URL=https://your-ngrok-domain.ngrok-free.app
 # ngrok — omit NGROK_AUTHTOKEN entirely to disable ngrok
 NGROK_AUTHTOKEN=                       # from https://dashboard.ngrok.com
 # NGROK_DOMAIN=your-static-subdomain.ngrok-free.app  # optional static domain
+
+# LinkedIn
+LINKEDIN_PERSON_ID=                    # ID portion of urn:li:person:XXXXXXXX (GET /v2/userinfo → sub field)
 ```
 
 > **Service credentials** (OpenAI API key, Slack Bot Token, LinkedIn OAuth) are stored inside n8n's encrypted database and configured via the n8n UI — they are not read from `.env`.
@@ -297,6 +300,11 @@ In n8n:
 ### Approval loses draft text
 - Ensure **Store Draft → Merge → Approval Decision** pattern is used
 
+### LinkedIn image upload fails (400/401)
+- Confirm `LINKEDIN_PERSON_ID` is set correctly in `.env` (just the ID, not the full URN)
+- The LinkedIn OAuth credential must have the `w_member_social` scope
+- Re-authenticate the LinkedIn credential in n8n if the token has expired
+
 ---
 
 ## Security Notes
@@ -315,7 +323,7 @@ In n8n:
 | Approval | Human-in-the-loop via Slack reply |
 | Output | LinkedIn post (via HTTP API) |
 | Logging | Slack channel notifications for all outcomes |
-| Total Nodes | 25 |
+| Total Nodes | 33 |
 
 ---
 
@@ -331,7 +339,7 @@ Before doing anything expensive, a filter node drops messages that should be ski
 - Message was sent by a bot (`bot_id` is present)
 - Message is a thread reply (`thread_ts` is present)
 
-Filtered messages go to a **Stop** (no-op) node. Valid messages continue.
+Filtered messages go to a **Filtered Out** (no-op) node. Valid messages continue.
 
 ### 3. Respond to Webhook (Immediately)
 A `Respond to Webhook` node fires in parallel immediately after the initial parse — this acknowledges Slack's event delivery within the required 3-second window so Slack doesn't retry.
@@ -353,10 +361,11 @@ Sends the Slack message text to `https://api.openai.com/v1/responses` with a str
 ### 6. Parse OpenAI Response
 A JavaScript code node extracts the model's text output from the Responses API structure and parses it as JSON. If parsing fails, it returns an error flag and the raw response for logging.
 
-### 7. Config / Constants
+### 7. Set Channel IDs
 Sets shared runtime constants used throughout the rest of the workflow:
 - `log_channel_id` — Slack channel ID for all log/error messages
 - `approval_channel_id` — Slack channel ID where approval requests are sent
+- `person_urn` — LinkedIn person URN built from `LINKEDIN_PERSON_ID` env var (`urn:li:person:...`)
 
 ### 8. Check Parse Error
 If the OpenAI response couldn't be parsed as valid JSON, the workflow branches to **Log Parse Error**, which posts a ⚠️ message to the log Slack channel including the error, the original Slack message, and the raw OpenAI response.
@@ -374,9 +383,13 @@ If the content passes the safety check:
 5. **Approval Decision** — checks whether the reply contains `approve`.
 
 ### 11. On Approval — Publish to LinkedIn
-1. **Build Final LinkedIn Text** — formats hashtags (ensures each starts with `#`) and concatenates them onto the post text to produce `final_text`.
-2. **LinkedIn Post** — sends an HTTP POST request to the LinkedIn API to publish the post.
-3. **Log Success** — posts a ✅ confirmation to the Slack log channel.
+1. **Build Final LinkedIn Text** — formats hashtags (ensures each starts with `#`) and assembles `final_text` with blank-line spacing between the post body, article link, and hashtags.
+2. **Fetch Article Page** — GETs the article URL to retrieve its HTML.
+3. **Extract OG Image URL** — parses the `og:image` meta tag from the HTML. Outputs `image_url` (or `null` if not found).
+4. **Has Image?** — branches the workflow:
+   - **Image found →** Register LinkedIn Upload → Fetch Image Binary → Upload Image to LinkedIn → **Publish to LinkedIn (with image)** — calls `POST /v2/ugcPosts` with `shareMediaCategory: IMAGE` and the uploaded asset URN.
+   - **No image →** **Publish to LinkedIn (text only)** — calls `POST /v2/ugcPosts` with `shareMediaCategory: NONE`.
+5. **Log Success** — posts a ✅ confirmation to the Slack log channel.
 
 ### 12. On Rejection — Log and Stop
 If the approver replied with anything other than `approve`, the workflow logs a rejection message to the Slack channel and stops.
@@ -390,23 +403,23 @@ Slack Webhook
      │
      ├──► Respond to Webhook (immediate 200 OK)
      │
-Code: Parse Slack Event
+Parse Slack Event
      │
-Ignore Rules ──► [Stop]
+Ignore Rules ──► [Filtered Out]
      │
 Prepare Input
      │
-OpenAI API Call (gpt-4.1-mini)
+OpenAI: Generate Draft
      │
-Code: Parse JSON Response
+Parse OpenAI Response
      │
-Config / Constants
+Set Channel IDs
      │
 Check Parse Error ──► [Log Parse Error → Slack]
      │
 Safety Gate ──► [Log Safety Failure → Slack]
      │
-Store Draft ──► Send For Approval → Wait For Reply
+Store Draft ──► Send For Approval → Wait For Approval Reply
                                          │
                               Merge Draft + Decision
                                          │
@@ -414,13 +427,30 @@ Store Draft ──► Send For Approval → Wait For Reply
                               ┌──────────┴──────────┐
                           [Approved]            [Rejected]
                               │                     │
-                  Build Final LinkedIn Text   Config/Constants2
+                  Build Final LinkedIn Text   Set Channel IDs (Rejection)
                               │                     │
-                        LinkedIn Post         Log Rejection
+                  Fetch Article Page          Log Rejection
                               │                     │
-                   Config / Constants1        Log Error → Slack
+                  Extract OG Image URL        Log Error → Slack
                               │
-                        Log Success → Slack
+                          Has Image?
+                    ┌─────────┴──────────┐
+                 [yes]                 [no]
+                    │                    │
+       Register LinkedIn Upload    Publish to LinkedIn
+                    │               (text only)
+       Extract Upload Details           │
+                    │                   │
+       Fetch Image Binary               │
+                    │                   │
+       Upload Image to LinkedIn         │
+                    │                   │
+       Publish to LinkedIn              │
+         (with image)                   │
+                    └────────┬──────────┘
+                  Set Channel IDs (Success)
+                             │
+                       Log Success → Slack
 ```
 
 ---
@@ -442,7 +472,7 @@ Your Slack app must have the following enabled:
 - **Bot Token Scopes:** `chat:write`, `channels:history`, `channels:read`
 
 ### Channel IDs to Configure
-Update the three **Config / Constants** nodes with your actual Slack channel IDs:
+Update the **Set Channel IDs** node with your actual Slack channel IDs:
 
 | Variable | Description |
 |---|---|
@@ -450,7 +480,7 @@ Update the three **Config / Constants** nodes with your actual Slack channel IDs
 | `approval_channel_id` | Channel where draft posts are sent for human review |
 
 ### OpenAI Model
-The workflow uses `gpt-4.1-mini`. To use a different model, update the `jsonBody` in the **HTTP Request** node.
+The workflow uses `gpt-4.1-mini`. To use a different model, update the `jsonBody` in the **OpenAI: Generate Draft** node.
 
 ---
 
@@ -477,6 +507,7 @@ Any message posted to the monitored Slack channel that starts with `!skip` will 
 - The Wait node will hold the execution until the approver replies in Slack. Make sure your n8n instance's execution timeout is set high enough (or use the n8n Cloud plan which supports long-running executions).
 - Hashtags from OpenAI are automatically normalised — any tag missing a leading `#` gets one added before posting.
 - The `post_link` field (the article URL) is kept separate from `post_text` by the AI prompt, so you can format the LinkedIn post however you like before publishing.
+- If the article has an `og:image` meta tag, the workflow automatically attaches it to the LinkedIn post via a 3-step LinkedIn asset upload (register → upload binary → reference URN). If no `og:image` is found, the post is published as text-only.
 ---
 
 ## Optional Improvements
