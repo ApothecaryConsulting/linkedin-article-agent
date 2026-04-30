@@ -676,7 +676,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $json.post_link.match(/https?:\\/\\/[^\\s\"']+/)?.[0] }}",
+        "url": "={{ $json.post_link.split(' ').find(t => t.startsWith('http')) || $json.post_link }}",
         "options": {
           "timeout": 10000,
           "redirect": {
