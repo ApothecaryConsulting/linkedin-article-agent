@@ -779,7 +779,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst mechanism = item.value.uploadMechanism[\n  'com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'\n];\nreturn {\n  json: {\n    ...item,\n    upload_url: mechanism.uploadUrl,\n    asset_urn: item.value.asset\n  }\n};"
+        "jsCode": "const item = $input.first().json;\nconst originalItem = $('Has Image?').first().json;\nconst mechanism = item.value.uploadMechanism[\n  'com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'\n];\nreturn {\n  json: {\n    ...originalItem,\n    upload_url: mechanism.uploadUrl,\n    asset_urn: item.value.asset\n  }\n};"
       },
       "id": "77e6beef-46e3-4f24-a002-4dfd0ce6c974",
       "name": "Extract Upload Details",
