@@ -804,6 +804,24 @@
         4180,
         496
       ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.image_url }}",
+        "responseFormat": "file",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "e583dc29-5d47-4da2-a4c9-ffd572ddb6e1",
+      "name": "Fetch Image Binary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4400,
+        496
+      ]
     }
   ],
   "pinData": {},
@@ -1111,6 +1129,17 @@
         [
           {
             "node": "Fetch Image Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Image Binary": {
+      "main": [
+        [
+          {
+            "node": "Upload Image to LinkedIn",
             "type": "main",
             "index": 0
           }
