@@ -697,7 +697,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const html = $input.first().json.data || '';\nconst item = $input.first().json;\n\nconst match =\n  html.match(/<meta[^>]+property=[\"']og:image[\"'][^>]+content=[\"']([^\"']+)[\"']/i) ||\n  html.match(/<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']og:image[\"']/i);\n\nreturn { json: { ...item, image_url: match ? match[1] : null } };"
+        "jsCode": "const html = $input.first().json.data || '';\nconst originalItem = $('Safety Gate').first().json;\n\nconst match =\n  html.match(/<meta[^>]+property=[\"']og:image[\"'][^>]+content=[\"']([^\"']+)[\"']/i) ||\n  html.match(/<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']og:image[\"']/i);\n\nreturn { json: { ...originalItem, image_url: match ? match[1] : null } };"
       },
       "id": "662d2557-aeb4-4f25-a1ad-bbd767e9ee0b",
       "name": "Extract OG Image URL",
