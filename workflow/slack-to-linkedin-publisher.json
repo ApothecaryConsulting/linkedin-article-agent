@@ -393,7 +393,7 @@
           "value": "={{ $json.log_channel_id }}",
           "mode": "id"
         },
-        "text": "=\u2705 *Posted to LinkedIn Successfully*\n\n*Status:* {{ $json.statusCode || 'Success' }}\n\n*Preview (first 120 chars):*\n{{ $json.final_text ? $json.final_text.substring(0, 120) : 'N/A' }}...\n\n*Full post length:* {{ $json.final_text ? $json.final_text.length : 0 }} characters",
+        "text": "=\u2705 *Posted to LinkedIn Successfully*\n\n*Status:* {{ $json.statusCode || 'Success' }}\n\n*Post length:* {{ $('Build Final LinkedIn Text').first().json.final_text.length }} characters",
         "otherOptions": {}
       },
       "id": "21841bb2-6967-435c-a51a-f83cb17df377",
