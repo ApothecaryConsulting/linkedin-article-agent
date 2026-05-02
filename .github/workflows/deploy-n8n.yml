@@ -1,0 +1,33 @@
+name: Deploy n8n Workflows
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'workflow/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2   # need HEAD~1 to recover deleted files
+
+      - name: Upsert changed workflows
+        env:
+          N8N_API_URL: ${{ secrets.N8N_API_URL }}
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: |
+          git diff --name-only --diff-filter=AM HEAD~1 HEAD -- 'workflow/*.json' | while read -r file; do
+            bash scripts/deploy-workflows.sh upsert "$file"
+          done
+
+      - name: Delete removed workflows
+        env:
+          N8N_API_URL: ${{ secrets.N8N_API_URL }}
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: |
+          git diff --name-only --diff-filter=D HEAD~1 HEAD -- 'workflow/*.json' | while read -r file; do
+            bash scripts/deploy-workflows.sh delete "$file"
+          done
