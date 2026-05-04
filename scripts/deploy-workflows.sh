@@ -15,6 +15,15 @@ API_KEY="${N8N_API_KEY:?N8N_API_KEY is required}"
 AUTH_HEADER="X-N8N-API-KEY: $API_KEY"
 CURL_OPTS=(--connect-timeout 10 --max-time 30)
 
+# Strip fields the n8n API considers read-only on create/update.
+# settings is allow-listed to its known valid keys to avoid "additional properties" errors.
+strip_readonly() {
+  jq '
+    del(.id, .active, .versionId, .meta, .tags) |
+    if .settings then .settings = {executionOrder: .settings.executionOrder} else . end
+  '
+}
+
 # Call n8n API and print a summary; fail loudly if the response is not JSON
 # or does not contain the expected fields.
 api_call() {
@@ -38,50 +47,41 @@ api_call() {
     exit 1
   fi
 
-  echo "$response" | jq '{id:.id, name:.name}'
+  echo "$response"
 }
 
 upsert_workflow() {
   local file="$1"
   local body; body=$(cat "$file")
-  local id; id=$(echo "$body" | jq -r '.id // empty')
   local name; name=$(echo "$body" | jq -r '.name')
   local active; active=$(echo "$body" | jq -r '.active')
+  local payload; payload=$(echo "$body" | strip_readonly)
 
-  if [ -z "$id" ]; then
-    echo "ERROR: $file has no .id field" >&2
-    exit 1
-  fi
+  # Look up by name — n8n owns the ID; the JSON id field is only for local reference
+  local list; list=$(curl -s "${CURL_OPTS[@]}" -H "$AUTH_HEADER" "$API_URL/api/v1/workflows?limit=250")
+  local existing_id; existing_id=$(echo "$list" | jq -r --arg name "$name" '.data[] | select(.name == $name) | .id' | head -1)
 
-  # Check existence by reading the workflow and verifying it's a JSON object
-  # with an "id" field — guards against the n8n UI's SPA returning HTTP 200
-  # with HTML for any unknown path.
-  local existing
-  existing=$(curl -s "${CURL_OPTS[@]}" -H "$AUTH_HEADER" "$API_URL/api/v1/workflows/$id")
-  local workflow_exists=false
-  if echo "$existing" | jq -e '.id' > /dev/null 2>&1; then
-    workflow_exists=true
-  fi
-
-  if [ "$workflow_exists" = "true" ]; then
-    echo "Updating: $name ($id)"
-    api_call PUT "$API_URL/api/v1/workflows/$id" \
+  if [ -n "$existing_id" ]; then
+    echo "Updating: $name ($existing_id)"
+    api_call PUT "$API_URL/api/v1/workflows/$existing_id" \
       -H "Content-Type: application/json" \
       -H "$AUTH_HEADER" \
-      -d "$body"
+      -d "$payload" | jq '{id:.id, name:.name}'
   else
-    echo "Creating: $name ($id)"
-    api_call POST "$API_URL/api/v1/workflows" \
+    echo "Creating: $name"
+    local result; result=$(api_call POST "$API_URL/api/v1/workflows" \
       -H "Content-Type: application/json" \
       -H "$AUTH_HEADER" \
-      -d "$body"
+      -d "$payload")
+    existing_id=$(echo "$result" | jq -r '.id')
+    echo "$result" | jq '{id:.id, name:.name}'
   fi
 
   if [ "$active" = "true" ]; then
     echo "Activating: $name"
-    curl -s "${CURL_OPTS[@]}" -X POST -H "$AUTH_HEADER" "$API_URL/api/v1/workflows/$id/activate" > /dev/null
+    curl -s "${CURL_OPTS[@]}" -X POST -H "$AUTH_HEADER" "$API_URL/api/v1/workflows/$existing_id/activate" > /dev/null
   else
-    curl -s "${CURL_OPTS[@]}" -X POST -H "$AUTH_HEADER" "$API_URL/api/v1/workflows/$id/deactivate" > /dev/null
+    curl -s "${CURL_OPTS[@]}" -X POST -H "$AUTH_HEADER" "$API_URL/api/v1/workflows/$existing_id/deactivate" > /dev/null
   fi
 }
 
@@ -94,18 +94,21 @@ delete_workflow() {
     return
   fi
 
-  local id; id=$(echo "$body" | jq -r '.id // empty')
   local name; name=$(echo "$body" | jq -r '.name')
 
-  if [ -z "$id" ]; then
-    echo "WARNING: no .id in recovered $file — skipping delete" >&2
+  # Look up by name to get the n8n-assigned ID
+  local list; list=$(curl -s "${CURL_OPTS[@]}" -H "$AUTH_HEADER" "$API_URL/api/v1/workflows?limit=250")
+  local existing_id; existing_id=$(echo "$list" | jq -r --arg name "$name" '.data[] | select(.name == $name) | .id' | head -1)
+
+  if [ -z "$existing_id" ]; then
+    echo "WARNING: $name not found on server — skipping delete" >&2
     return
   fi
 
-  echo "Deleting: $name ($id)"
+  echo "Deleting: $name ($existing_id)"
   curl -s "${CURL_OPTS[@]}" -X DELETE \
     -H "$AUTH_HEADER" \
-    "$API_URL/api/v1/workflows/$id"
+    "$API_URL/api/v1/workflows/$existing_id"
 }
 
 case "$MODE" in
