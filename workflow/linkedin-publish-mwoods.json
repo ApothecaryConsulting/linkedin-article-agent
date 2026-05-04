@@ -76,7 +76,6 @@
       ],
       "credentials": {
         "linkedInOAuth2Api": {
-          "id": "REPLACE_WITH_MWOODS_LINKEDIN_CRED_ID",
           "name": "LinkedIn account (MWoods)"
         }
       }
@@ -133,7 +132,6 @@
       ],
       "credentials": {
         "linkedInOAuth2Api": {
-          "id": "REPLACE_WITH_MWOODS_LINKEDIN_CRED_ID",
           "name": "LinkedIn account (MWoods)"
         }
       }
@@ -181,7 +179,6 @@
       ],
       "credentials": {
         "linkedInOAuth2Api": {
-          "id": "REPLACE_WITH_MWOODS_LINKEDIN_CRED_ID",
           "name": "LinkedIn account (MWoods)"
         }
       }
@@ -216,7 +213,6 @@
       ],
       "credentials": {
         "linkedInOAuth2Api": {
-          "id": "REPLACE_WITH_MWOODS_LINKEDIN_CRED_ID",
           "name": "LinkedIn account (MWoods)"
         }
       }

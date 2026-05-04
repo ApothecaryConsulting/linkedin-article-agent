@@ -14,11 +14,30 @@
             {
               "id": "condition-bot-id",
               "leftValue": "={{ $json.bot_id }}",
-              "rightValue": "true",
+              "rightValue": "",
               "operator": {
                 "type": "string",
                 "operation": "notEmpty",
                 "singleValue": true
+              }
+            },
+            {
+              "id": "condition-subtype",
+              "leftValue": "={{ $json.subtype }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "condition-slackbot",
+              "leftValue": "={{ $json.user }}",
+              "rightValue": "USLACKBOT",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
               }
             }
           ],
@@ -156,7 +175,6 @@
       "webhookId": "not-configured-reply-wh",
       "credentials": {
         "slackApi": {
-          "id": "qBHktyyLDogsMSxz",
           "name": "Slack account"
         }
       }
@@ -217,7 +235,6 @@
       "webhookId": "eb983526-eb3a-4644-8944-236aec3908c0",
       "credentials": {
         "slackApi": {
-          "id": "qBHktyyLDogsMSxz",
           "name": "Slack account"
         }
       }
@@ -278,7 +295,6 @@
       "webhookId": "26b7317e-b024-4fe6-8ef0-f63e603ad6ef",
       "credentials": {
         "slackApi": {
-          "id": "qBHktyyLDogsMSxz",
           "name": "Slack account"
         }
       }
@@ -307,7 +323,6 @@
       "webhookId": "9f48233a-a64a-443e-8496-6a015d416fee",
       "credentials": {
         "slackApi": {
-          "id": "qBHktyyLDogsMSxz",
           "name": "Slack account"
         }
       }
@@ -397,7 +412,6 @@
       "webhookId": "c9a09d3a-fb1b-4c78-81d4-3c8b02d57e56",
       "credentials": {
         "slackApi": {
-          "id": "qBHktyyLDogsMSxz",
           "name": "Slack account"
         }
       }
@@ -407,7 +421,7 @@
         "select": "channel",
         "channelId": {
           "__rl": true,
-          "value": "={{ $log.log_channel_id }}",
+          "value": "={{ $json.log_channel_id }}",
           "mode": "id"
         },
         "text": "=❌ *Workflow Error*\n\n*Node:* {{ $node.name }}\n*Error:* {{ $json.error?.message || 'Unknown error' }}\n\n*Original message:*\n{{ $json.raw_text || 'N/A' }}\n\n*Stack trace:*\n```{{ $json.error?.stack || 'N/A' }}```",
@@ -424,7 +438,6 @@
       "webhookId": "6b8997a2-b1c7-4335-8438-f7fe93f486a6",
       "credentials": {
         "slackApi": {
-          "id": "qBHktyyLDogsMSxz",
           "name": "Slack account"
         }
       }
@@ -514,7 +527,6 @@
       "name": "OpenAI: Generate Draft",
       "credentials": {
         "openAiApi": {
-          "id": "lWyHU7ovhPGdqLIX",
           "name": "OpenAi account"
         }
       }
@@ -749,7 +761,6 @@
       "webhookId": "0cab33f0-7240-435d-b818-61ad7e006588",
       "credentials": {
         "slackApi": {
-          "id": "qBHktyyLDogsMSxz",
           "name": "Slack account"
         }
       }
