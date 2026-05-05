@@ -62,6 +62,11 @@ upsert_workflow() {
   local existing_id; existing_id=$(echo "$list" | jq -r --arg name "$name" '.data[] | select(.name == $name) | .id' | head -1)
 
   if [ -n "$existing_id" ]; then
+    local server_active; server_active=$(echo "$list" | jq -r --arg name "$name" '.data[] | select(.name == $name) | .active' | head -1)
+    if [ "$server_active" = "true" ]; then
+      echo "Deactivating: $name (before update)"
+      curl -s "${CURL_OPTS[@]}" -X POST -H "$AUTH_HEADER" "$API_URL/api/v1/workflows/$existing_id/deactivate" > /dev/null
+    fi
     echo "Updating: $name ($existing_id)"
     api_call PUT "$API_URL/api/v1/workflows/$existing_id" \
       -H "Content-Type: application/json" \
