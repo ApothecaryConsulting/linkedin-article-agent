@@ -24,6 +24,23 @@ strip_readonly() {
   '
 }
 
+# Inject server-side credential IDs by matching credential type (first match).
+# Matching by type only avoids name-mismatch failures across instances.
+inject_credential_ids() {
+  local creds_json="$1"
+  jq --argjson creds "$creds_json" '
+    .nodes |= map(
+      if .credentials then
+        .credentials |= with_entries(
+          .key as $ctype |
+          (($creds.data // []) | map(select(.type == $ctype)) | .[0].id // null) as $id |
+          if $id then .value.id = $id else . end
+        )
+      else . end
+    )
+  '
+}
+
 # Call n8n API and print a summary; fail loudly if the response is not JSON
 # or does not contain the expected fields.
 api_call() {
@@ -56,7 +73,8 @@ upsert_workflow() {
   local name; name=$(echo "$body" | jq -r '.name')
   local active; active=$(echo "$body" | jq -r '.active')
 
-  local payload; payload=$(echo "$body" | strip_readonly)
+  local creds_list; creds_list=$(curl -s "${CURL_OPTS[@]}" -H "$AUTH_HEADER" "$API_URL/api/v1/credentials?limit=250")
+  local payload; payload=$(echo "$body" | strip_readonly | inject_credential_ids "$creds_list")
 
   # Look up by name — n8n owns the ID; the JSON id field is only for local reference
   local list; list=$(curl -s "${CURL_OPTS[@]}" -H "$AUTH_HEADER" "$API_URL/api/v1/workflows?limit=250")
