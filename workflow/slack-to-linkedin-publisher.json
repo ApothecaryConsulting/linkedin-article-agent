@@ -400,10 +400,10 @@
         "select": "channel",
         "channelId": {
           "__rl": true,
-          "value": "={{ $json.approval_channel_id }}",
+          "value": "={{ $('Set Channel IDs').first().json.approval_channel_id }}",
           "mode": "id"
         },
-        "text": "=✅ *Posted to LinkedIn Successfully*\n\n*User:* {{ $('Resolve User Config').first().json.user_display_name }}\n*Status:* {{ $json.statusCode || 'Success' }}\n\n*Post length:* {{ $('Build Final LinkedIn Text').first().json.final_text.length }} characters",
+        "text": "=✅ *Posted to LinkedIn Successfully*\n\n*User:* {{ $('Resolve User Config').first().json.user_display_name }}\n*Status:* Success\n\n*Post length:* {{ $('Build Final LinkedIn Text').first().json.final_text.length }} characters",
         "otherOptions": {}
       },
       "id": "21841bb2-6967-435c-a51a-f83cb17df377",
