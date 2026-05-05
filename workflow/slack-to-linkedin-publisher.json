@@ -220,7 +220,7 @@
         "select": "channel",
         "channelId": {
           "__rl": true,
-          "value": "={{ $json.log_channel_id }}",
+          "value": "={{ $json.approval_channel_id }}",
           "mode": "id"
         },
         "text": "=⚠️ *JSON Parse Error*\n\n*Error:* {{ $json.error_message }}\n\n*Original Slack message:*\n{{ $json.raw_text }}\n\n*Raw OpenAI response:*\n```{{ JSON.stringify($json.raw_response, null, 2) }}```",
@@ -281,7 +281,7 @@
         "select": "channel",
         "channelId": {
           "__rl": true,
-          "value": "={{ $json.log_channel_id}}",
+          "value": "={{ $json.approval_channel_id }}",
           "mode": "id"
         },
         "text": "=🛑 *Safety Check Failed*\n\n*Reason:* {{ $json.notes }}\n\n*Original Slack message:*\n{{ $json.raw_text }}\n\n*Safer alternative suggested:*\n{{ $json.post_text }}",
@@ -400,7 +400,7 @@
         "select": "channel",
         "channelId": {
           "__rl": true,
-          "value": "={{ $json.log_channel_id }}",
+          "value": "={{ $json.approval_channel_id }}",
           "mode": "id"
         },
         "text": "=✅ *Posted to LinkedIn Successfully*\n\n*User:* {{ $('Resolve User Config').first().json.user_display_name }}\n*Status:* {{ $json.statusCode || 'Success' }}\n\n*Post length:* {{ $('Build Final LinkedIn Text').first().json.final_text.length }} characters",
@@ -427,7 +427,7 @@
         "select": "channel",
         "channelId": {
           "__rl": true,
-          "value": "={{ $json.log_channel_id }}",
+          "value": "={{ $json.approval_channel_id }}",
           "mode": "id"
         },
         "text": "=❌ *Workflow Error*\n\n*Node:* {{ $node.name }}\n*Error:* {{ $json.error?.message || 'Unknown error' }}\n\n*Original message:*\n{{ $json.raw_text || 'N/A' }}\n\n*Stack trace:*\n```{{ $json.error?.stack || 'N/A' }}```",
@@ -555,12 +555,6 @@
         "assignments": {
           "assignments": [
             {
-              "id": "16e29578-700e-4c14-b3af-cb0fa555d171",
-              "name": "log_channel_id",
-              "value": "={{ $env.LOG_CHANNEL_ID }}",
-              "type": "string"
-            },
-            {
               "id": "863bd63a-d747-4a5b-b424-33ba7604d7f8",
               "name": "approval_channel_id",
               "value": "={{ $('Prepare Input').first().json.source_channel }}",
@@ -651,54 +645,6 @@
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "16e29578-700e-4c14-b3af-cb0fa555d171",
-              "name": "log_channel_id",
-              "value": "={{ $env.LOG_CHANNEL_ID }}",
-              "type": "string"
-            }
-          ]
-        },
-        "includeOtherFields": true,
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        3104,
-        912
-      ],
-      "id": "c0f53a0b-14d2-4d90-be19-1fe1244e3a2d",
-      "name": "Set Channel IDs (Success)"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "16e29578-700e-4c14-b3af-cb0fa555d171",
-              "name": "log_channel_id",
-              "value": "={{ $env.LOG_CHANNEL_ID }}",
-              "type": "string"
-            }
-          ]
-        },
-        "includeOtherFields": true,
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        2960,
-        128
-      ],
-      "id": "c573e716-ef0d-4053-b16b-4a44ec02da92",
-      "name": "Set Channel IDs (Rejection)"
-    },
-    {
-      "parameters": {
         "method": "GET",
         "url": "={{ $json.post_link.split(' ').find(t => t.startsWith('http')) || $json.post_link }}",
         "options": {
@@ -751,7 +697,7 @@
         "select": "channel",
         "channelId": {
           "__rl": true,
-          "value": "={{ $json.log_channel_id}}",
+          "value": "={{ $json.approval_channel_id }}",
           "mode": "id"
         },
         "text": "=❌ *LinkedIn Post Rejected*\n\n*User:* {{ $('Resolve User Config').first().json.user_display_name }}\n\nPost was not approved for publishing.",
@@ -921,7 +867,7 @@
         ],
         [
           {
-            "node": "Set Channel IDs (Rejection)",
+            "node": "Log Rejection",
             "type": "main",
             "index": 0
           }
@@ -1048,28 +994,6 @@
         ]
       ]
     },
-    "Set Channel IDs (Success)": {
-      "main": [
-        [
-          {
-            "node": "Log Success",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Set Channel IDs (Rejection)": {
-      "main": [
-        [
-          {
-            "node": "Log Rejection",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Fetch Article Page": {
       "main": [
         [
@@ -1096,7 +1020,7 @@
       "main": [
         [
           {
-            "node": "Set Channel IDs (Success)",
+            "node": "Log Success",
             "type": "main",
             "index": 0
           }
