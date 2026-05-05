@@ -155,7 +155,7 @@
     },
     {
       "parameters": {
-        "authentication": "oAuth2",
+        "authentication": "accessToken",
         "select": "channel",
         "channelId": {
           "__rl": true,
@@ -175,7 +175,7 @@
       ],
       "webhookId": "not-configured-reply-wh",
       "credentials": {
-        "slackOAuth2Api": {
+        "slackApi": {
           "name": "Slack account"
         }
       }
@@ -216,7 +216,7 @@
     },
     {
       "parameters": {
-        "authentication": "oAuth2",
+        "authentication": "accessToken",
         "select": "channel",
         "channelId": {
           "__rl": true,
@@ -236,7 +236,7 @@
       ],
       "webhookId": "eb983526-eb3a-4644-8944-236aec3908c0",
       "credentials": {
-        "slackOAuth2Api": {
+        "slackApi": {
           "name": "Slack account"
         }
       }
@@ -277,7 +277,7 @@
     },
     {
       "parameters": {
-        "authentication": "oAuth2",
+        "authentication": "accessToken",
         "select": "channel",
         "channelId": {
           "__rl": true,
@@ -297,14 +297,14 @@
       ],
       "webhookId": "26b7317e-b024-4fe6-8ef0-f63e603ad6ef",
       "credentials": {
-        "slackOAuth2Api": {
+        "slackApi": {
           "name": "Slack account"
         }
       }
     },
     {
       "parameters": {
-        "authentication": "oAuth2",
+        "authentication": "accessToken",
         "select": "channel",
         "channelId": {
           "__rl": true,
@@ -326,7 +326,7 @@
       ],
       "webhookId": "9f48233a-a64a-443e-8496-6a015d416fee",
       "credentials": {
-        "slackOAuth2Api": {
+        "slackApi": {
           "name": "Slack account"
         }
       }
@@ -396,7 +396,7 @@
     },
     {
       "parameters": {
-        "authentication": "oAuth2",
+        "authentication": "accessToken",
         "select": "channel",
         "channelId": {
           "__rl": true,
@@ -416,14 +416,14 @@
       ],
       "webhookId": "c9a09d3a-fb1b-4c78-81d4-3c8b02d57e56",
       "credentials": {
-        "slackOAuth2Api": {
+        "slackApi": {
           "name": "Slack account"
         }
       }
     },
     {
       "parameters": {
-        "authentication": "oAuth2",
+        "authentication": "accessToken",
         "select": "channel",
         "channelId": {
           "__rl": true,
@@ -443,7 +443,7 @@
       ],
       "webhookId": "6b8997a2-b1c7-4335-8438-f7fe93f486a6",
       "credentials": {
-        "slackOAuth2Api": {
+        "slackApi": {
           "name": "Slack account"
         }
       }
@@ -693,7 +693,7 @@
     },
     {
       "parameters": {
-        "authentication": "oAuth2",
+        "authentication": "accessToken",
         "select": "channel",
         "channelId": {
           "__rl": true,
@@ -713,7 +713,7 @@
       ],
       "webhookId": "0cab33f0-7240-435d-b818-61ad7e006588",
       "credentials": {
-        "slackOAuth2Api": {
+        "slackApi": {
           "name": "Slack account"
         }
       }
