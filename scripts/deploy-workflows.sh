@@ -24,8 +24,8 @@ strip_readonly() {
   '
 }
 
-# Inject server-side credential IDs by matching credential type (first match).
-# Matching by type only avoids name-mismatch failures across instances.
+# Inject server-side credential IDs by matching type+name first, falling back
+# to type-only so single-credential types (Slack, OpenAI) still resolve.
 inject_credential_ids() {
   local creds_json="$1"
   jq --argjson creds "$creds_json" '
@@ -33,7 +33,13 @@ inject_credential_ids() {
       if .credentials then
         .credentials |= with_entries(
           .key as $ctype |
-          (($creds.data // []) | map(select(.type == $ctype)) | .[0].id // null) as $id |
+          .value.name as $cname |
+          (
+            ($creds.data // []) |
+            (map(select(.type == $ctype and .name == $cname)) | .[0].id) //
+            (map(select(.type == $ctype)) | .[0].id) //
+            null
+          ) as $id |
           if $id then .value.id = $id else . end
         )
       else . end
