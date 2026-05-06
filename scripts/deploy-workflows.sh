@@ -13,7 +13,7 @@ FILE="$2"
 API_URL="${N8N_API_URL:?N8N_API_URL is required}"
 API_KEY="${N8N_API_KEY:?N8N_API_KEY is required}"
 AUTH_HEADER="X-N8N-API-KEY: $API_KEY"
-CURL_OPTS=(--connect-timeout 10 --max-time 30)
+CURL_OPTS=(--connect-timeout 30 --max-time 120)
 
 # Strip fields the n8n API considers read-only on create/update.
 # settings is allow-listed to its known valid keys to avoid "additional properties" errors.
